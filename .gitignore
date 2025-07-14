@@ -1,0 +1,29 @@
+# 忽略所有.env文件
+.env
+
+# 忽略所有的日志文件
+/storage/logs/*.log
+
+# 忽略vendor目录下的所有文件（Composer依赖）
+/vendor
+
+# 忽略PHPStorm/.idea目录下的所有文件
+/.idea
+
+# 忽略操作系统自动生成的文件
+.DS_Store
+Thumbs.db
+
+# 忽略缓存文件夹中的内容
+/var/cache/*
+!/var/cache/.gitkeep  # 但保留.gitkeep文件，以确保仓库中保留空目录
+
+# 忽略自定义的日志文件或其他临时文件
+*.log
+*.tmp
+
+# 忽略本工程数据文件等
+admin.php
+/data
+/file
+/pic

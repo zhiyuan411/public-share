@@ -1,0 +1,350 @@
+<?php
+// 确保中文正常显示
+header('Content-Type: text/html; charset=utf-8');
+
+// 初始化数据库
+$db = new SQLite3('data/data.db');
+
+// 设置默认值
+$settings = [
+    'items_per_page' => 10,
+    'show_user_info' => 1,
+    'text_expire_days' => 0,
+    'image_expire_days' => 0,
+    'file_expire_days' => 0,
+    'max_image_size' => 0,
+    'max_file_size' => 0
+];
+
+// 从数据库加载设置
+$query = $db->query('SELECT name, value FROM settings');
+while ($row = $query->fetchArray(SQLITE3_ASSOC)) {
+    $settings[$row['name']] = $row['value'];
+}
+
+// 处理表单提交
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 更新设置
+    $updateStmt = $db->prepare('INSERT OR REPLACE INTO settings (name, value) VALUES (:name, :value)');
+
+    $updateStmt->bindValue(':name', 'items_per_page', SQLITE3_TEXT);
+    $updateStmt->bindValue(':value', (int)$_POST['items_per_page'], SQLITE3_INTEGER);
+    $updateStmt->execute();
+
+    $updateStmt->bindValue(':name', 'show_user_info', SQLITE3_TEXT);
+    $updateStmt->bindValue(':value', isset($_POST['show_user_info']) ? 1 : 0, SQLITE3_INTEGER);
+    $updateStmt->execute();
+
+    $updateStmt->bindValue(':name', 'text_expire_days', SQLITE3_TEXT);
+    $updateStmt->bindValue(':value', (int)$_POST['text_expire_days'], SQLITE3_INTEGER);
+    $updateStmt->execute();
+
+    $updateStmt->bindValue(':name', 'image_expire_days', SQLITE3_TEXT);
+    $updateStmt->bindValue(':value', (int)$_POST['image_expire_days'], SQLITE3_INTEGER);
+    $updateStmt->execute();
+
+    $updateStmt->bindValue(':name', 'file_expire_days', SQLITE3_TEXT);
+    $updateStmt->bindValue(':value', (int)$_POST['file_expire_days'], SQLITE3_INTEGER);
+    $updateStmt->execute();
+
+    $updateStmt->bindValue(':name', 'max_image_size', SQLITE3_TEXT);
+    $updateStmt->bindValue(':value', (int)$_POST['max_image_size'], SQLITE3_INTEGER);
+    $updateStmt->execute();
+
+    $updateStmt->bindValue(':name', 'max_file_size', SQLITE3_TEXT);
+    $updateStmt->bindValue(':value', (int)$_POST['max_file_size'], SQLITE3_INTEGER);
+    $updateStmt->execute();
+
+    // 刷新页面
+    header('Location: admin.php?success=1');
+    exit;
+}
+
+// 计算统计信息
+$postCountQuery = $db->query('SELECT COUNT(*) as count FROM posts');
+$postCount = $postCountQuery->fetchArray(SQLITE3_ASSOC)['count'];
+
+$imageCountQuery = $db->query('SELECT COUNT(*) as count FROM images');
+$imageCount = $imageCountQuery->fetchArray(SQLITE3_ASSOC)['count'];
+
+$fileCountQuery = $db->query('SELECT COUNT(*) as count FROM files');
+$fileCount = $fileCountQuery->fetchArray(SQLITE3_ASSOC)['count'];
+
+// 获取图片总大小
+$imageSize = 0;
+$imageSizeQuery = $db->query('SELECT size FROM images');
+while ($image = $imageSizeQuery->fetchArray(SQLITE3_ASSOC)) {
+    $imageSize += $image['size'];
+}
+
+// 获取文件总大小
+$fileSize = 0;
+$fileSizeQuery = $db->query('SELECT size FROM files');
+while ($file = $fileSizeQuery->fetchArray(SQLITE3_ASSOC)) {
+    $fileSize += $file['size'];
+}
+
+// 格式化文件大小
+function formatSize($bytes) {
+    if ($bytes === 0) return '0 B';
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $i = floor(log($bytes, 1024));
+    return round($bytes / pow(1024, $i), 2) . ' ' . $units[$i];
+}
+?>
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公共交流区 - 管理设置</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        danger: '#EF4444',
+                        warning: '#F59E0B',
+                        dark: '#1F2937',
+                        light: '#F3F4F6'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .form-input {
+                @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200;
+            }
+            .form-label {
+                @apply block text-sm font-medium text-gray-700 mb-1;
+            }
+            .form-checkbox {
+                @apply h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded;
+            }
+            .card {
+                @apply bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg mb-6;
+            }
+            .btn {
+                @apply px-4 py-2 rounded-md font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+            }
+            .btn-primary {
+                @apply bg-primary text-white hover:bg-blue-600 focus:ring-primary;
+            }
+            .btn-outline {
+                @apply border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-300;
+            }
+            .stat-card {
+                @apply bg-white rounded-xl shadow-sm p-6 border border-gray-100 transition-all duration-300 hover:shadow-md;
+            }
+            .toast {
+                @apply fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-500 opacity-0 translate-y-[-20px];
+            }
+            .toast.show {
+                @apply opacity-100 translate-y-0;
+            }
+            .toast-success {
+                @apply bg-green-500 text-white;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="mb-8">
+            <h1 class="text-[clamp(1.75rem,4vw,2.5rem)] font-bold text-dark mb-2">公共交流区 - 管理设置</h1>
+            <p class="text-gray-600 mb-6">配置系统参数和查看统计信息</p>
+            <a href="index.php" class="btn btn-outline flex items-center gap-2">
+                <i class="fa fa-arrow-left"></i> 返回首页
+            </a>
+        </header>
+
+        <!-- 成功提示 -->
+        <?php if (isset($_GET['success'])): ?>
+        <div id="toast" class="toast toast-success show">
+            <div class="flex items-center gap-2">
+                <i class="fa fa-check-circle"></i>
+                <span>设置已成功保存</span>
+            </div>
+        </div>
+        <script>
+            setTimeout(() => {
+                document.getElementById('toast').classList.remove('show');
+            }, 3000);
+        </script>
+        <?php endif; ?>
+
+        <!-- 统计信息 -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="stat-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-700">帖子总数</h3>
+                    <i class="fa fa-comments text-2xl text-primary"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900"><?= $postCount ?></p>
+                <p class="text-sm text-gray-500 mt-1">当前系统中的帖子数量</p>
+            </div>
+
+            <div class="stat-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-700">上传图片</h3>
+                    <i class="fa fa-image text-2xl text-secondary"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900"><?= $imageCount ?></p>
+                <p class="text-sm text-gray-500 mt-1">共 <?= formatSize($imageSize) ?></p>
+            </div>
+
+            <div class="stat-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-700">上传文件</h3>
+                    <i class="fa fa-file text-2xl text-warning"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900"><?= $fileCount ?></p>
+                <p class="text-sm text-gray-500 mt-1">共 <?= formatSize($fileSize) ?></p>
+            </div>
+        </section>
+
+        <!-- 设置表单 -->
+        <section class="card">
+            <div class="p-6">
+                <h2 class="text-xl font-semibold mb-6">系统设置</h2>
+
+                <form method="POST" class="space-y-6">
+                    <!-- 分页设置 -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">分页设置</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="items_per_page" class="form-label">每页显示数量</label>
+                                <input type="number" id="items_per_page" name="items_per_page" min="1" max="100"
+                                    value="<?= $settings['items_per_page'] ?>" class="form-input">
+                                <p class="mt-1 text-sm text-gray-500">设置首页展示区域每页显示的帖子数量</p>
+                            </div>
+
+                            <div>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" id="show_user_info" name="show_user_info"
+                                        <?= $settings['show_user_info'] ? 'checked' : '' ?> class="form-checkbox">
+                                    <span>显示用户信息</span>
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">在帖子中显示发布者的浏览器、操作系统和IP信息</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 过期设置 -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">内容过期设置</h3>
+                        <p class="mb-4 text-sm text-gray-600">设置不同类型内容的过期时间，0表示永不过期</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label for="text_expire_days" class="form-label">文本过期时间 (天)</label>
+                                <input type="number" id="text_expire_days" name="text_expire_days" min="0"
+                                    value="<?= $settings['text_expire_days'] ?>" class="form-input">
+                            </div>
+
+                            <div>
+                                <label for="image_expire_days" class="form-label">图片过期时间 (天)</label>
+                                <input type="number" id="image_expire_days" name="image_expire_days" min="0"
+                                    value="<?= $settings['image_expire_days'] ?>" class="form-input">
+                            </div>
+
+                            <div>
+                                <label for="file_expire_days" class="form-label">文件过期时间 (天)</label>
+                                <input type="number" id="file_expire_days" name="file_expire_days" min="0"
+                                    value="<?= $settings['file_expire_days'] ?>" class="form-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 上传限制 -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">上传限制设置</h3>
+                        <p class="mb-4 text-sm text-gray-600">设置上传文件的大小限制，0表示无限制</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="max_image_size" class="form-label">图片大小限制 (MB)</label>
+                                <input type="number" id="max_image_size" name="max_image_size" min="0"
+                                    value="<?= $settings['max_image_size'] ?>" class="form-input">
+                            </div>
+
+                            <div>
+                                <label for="max_file_size" class="form-label">文件大小限制 (MB)</label>
+                                <input type="number" id="max_file_size" name="max_file_size" min="0"
+                                    value="<?= $settings['max_file_size'] ?>" class="form-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn btn-primary flex items-center gap-2">
+                            <i class="fa fa-save"></i> 保存设置
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // 表单提交前验证
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const itemsPerPage = parseInt(document.getElementById('items_per_page').value);
+            const textExpire = parseInt(document.getElementById('text_expire_days').value);
+            const imageExpire = parseInt(document.getElementById('image_expire_days').value);
+            const fileExpire = parseInt(document.getElementById('file_expire_days').value);
+            const maxImageSize = parseInt(document.getElementById('max_image_size').value);
+            const maxFileSize = parseInt(document.getElementById('max_file_size').value);
+
+            if (isNaN(itemsPerPage) || itemsPerPage < 1 || itemsPerPage > 100) {
+                e.preventDefault();
+                alert('请输入有效的每页显示数量 (1-100)');
+                return;
+            }
+
+            if (isNaN(textExpire) || textExpire < 0) {
+                e.preventDefault();
+                alert('请输入有效的文本过期时间 (>=0)');
+                return;
+            }
+
+            if (isNaN(imageExpire) || imageExpire < 0) {
+                e.preventDefault();
+                alert('请输入有效的图片过期时间 (>=0)');
+                return;
+            }
+
+            if (isNaN(fileExpire) || fileExpire < 0) {
+                e.preventDefault();
+                alert('请输入有效的文件过期时间 (>=0)');
+                return;
+            }
+
+            if (isNaN(maxImageSize) || maxImageSize < 0) {
+                e.preventDefault();
+                alert('请输入有效的图片大小限制 (>=0)');
+                return;
+            }
+
+            if (isNaN(maxFileSize) || maxFileSize < 0) {
+                e.preventDefault();
+                alert('请输入有效的文件大小限制 (>=0)');
+                return;
+            }
+        });
+    </script>
+</body>
+</html>
