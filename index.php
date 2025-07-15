@@ -99,7 +99,7 @@ $currentTime = date('Y-m-d H:i:s');
 // 清除过期文本
 if ($settings['text_expire_days'] > 0) {
     $expireTime = date('Y-m-d H:i:s', strtotime("-$settings[text_expire_days] days"));
-    $db->exec("UPDATE posts SET content = NULL WHERE text_expire < '$currentTime' AND content IS NOT NULL");
+    $db->exec("UPDATE posts SET content = NULL WHERE created_at < '$expireTime' AND content IS NOT NULL");
 }
 
 // 清除过期图片
