@@ -602,7 +602,7 @@ function formatFileSize($bytes) {
                                             <i class="fa fa-copy"></i> 复制图片
                                         </button>
                                         <a href="pic/<?= $image['filename'] ?>" download="<?= htmlspecialchars($image['original_name']) ?>" class="btn btn-primary text-sm mb-2 w-24">
-                                            <i class="fa fa-download"></i> 下载图片
+                                            <i class="fa fa-save"></i> 存储图片
                                         </a>
                                     </div>
                                 </div>
@@ -616,11 +616,22 @@ function formatFileSize($bytes) {
                         <div>
                             <h3 class="text-sm font-medium text-gray-700 mb-2">文本内容</h3>
                             <div class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-auto">
-                                <pre class="whitespace-pre text-gray-800 font-normal text-sm"><?= htmlspecialchars($item['post']['content']) ?></pre>
+                                <pre id="content-<?= $item['post']['id'] ?>" class="whitespace-pre text-gray-800 font-normal text-sm"><?= htmlspecialchars($item['post']['content']) ?></pre>
                             </div>
-                            <button class="mt-2 btn btn-outline text-sm" onclick="copyText('<?= $item['post']['id'] ?>')">
-                                <i class="fa fa-copy"></i> 复制文本
-                            </button>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <button class="btn btn-outline text-sm" onclick="copyText('<?= $item['post']['id'] ?>')">
+                                    <i class="fa fa-copy"></i> 复制文本
+                                </button>
+                                <button class="btn btn-outline text-sm" onclick="parseUrls('<?= $item['post']['id'] ?>')">
+                                    <i class="fa fa-link"></i> 解析网址
+                                </button>
+                            </div>
+                            <div id="urls-container-<?= $item['post']['id'] ?>" class="mt-3 hidden">
+                                <h4 class="text-sm font-medium text-gray-700 mb-1">提取的网址</h4>
+                                <div id="urls-list-<?= $item['post']['id'] ?>" class="bg-gray-50 rounded-lg p-3 text-sm max-h-48 overflow-auto">
+                                    <!-- 网址列表将在这里动态生成 -->
+                                </div>
+                            </div>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -912,7 +923,7 @@ function formatFileSize($bytes) {
 
         // 复制文本功能（增强版：自动回退到传统方法）
         function copyText(postId) {
-            const preElement = document.querySelector(`[onclick="copyText('${postId}')"]`).previousElementSibling;
+            const preElement = document.getElementById(`content-${postId}`);
             const textToCopy = preElement.innerText;
             
             // 首先尝试使用现代 Clipboard API
@@ -1003,13 +1014,13 @@ function formatFileSize($bytes) {
             // 添加文本内容
             const textContent = postCard.querySelector('pre');
             if (textContent) {
-                content += '文本内容:\n' + textContent.innerText + '\n\n';
+                content += '【文本内容】\n' + textContent.innerText + '\n\n';
             }
             
             // 添加图片链接
             const images = postCard.querySelectorAll('img');
             if (images.length > 0) {
-                content += '图片:\n';
+                content += '【图片】\n';
                 images.forEach(img => {
                     content += window.location.origin + '/' + img.src + '\n';
                 });
@@ -1019,7 +1030,7 @@ function formatFileSize($bytes) {
             // 添加文件链接
             const files = postCard.querySelectorAll('.fa-download');
             if (files.length > 0) {
-                content += '文件:\n';
+                content += '【文件】\n';
                 files.forEach(file => {
                     const link = file.closest('a');
                     content += window.location.origin + '/' + link.href + ' (' + link.previousElementSibling.innerText.replace(/\n/g, ' ').trim() + ')\n';
@@ -1041,7 +1052,43 @@ function formatFileSize($bytes) {
                 fallbackCopyText(content);
             }
         }
-        
+
+        function parseUrls(postId) {
+            const contentElement = document.getElementById(`content-${postId}`);
+            const content = contentElement.textContent || contentElement.innerText;
+            
+            // 使用正则表达式提取URL
+            const urlRegex = /https?:\/\/[^\s<>"']+/g;
+            const urls = content.match(urlRegex) || [];
+            
+            const urlsListElement = document.getElementById(`urls-list-${postId}`);
+            const containerElement = document.getElementById(`urls-container-${postId}`);
+            
+            // 清空现有列表
+            urlsListElement.innerHTML = '';
+            
+            if (urls.length === 0) {
+                urlsListElement.innerHTML = '<div class="text-gray-500 italic">未找到网址</div>';
+            } else {
+                // 创建URL链接列表
+                urls.forEach(url => {
+                    const urlElement = document.createElement('div');
+                    urlElement.className = 'mb-1';
+                    
+                    const linkElement = document.createElement('a');
+                    linkElement.href = url;
+                    linkElement.textContent = url;
+                    linkElement.target = '_blank';
+                    linkElement.className = 'text-blue-600 hover:underline break-all';
+                    
+                    urlElement.appendChild(linkElement);
+                    urlsListElement.appendChild(urlElement);
+                });
+            }
+            
+            // 显示URL容器
+            containerElement.classList.remove('hidden');
+        }        
         
         // 确认删除
         function confirmDelete(postId) {
@@ -1072,4 +1119,3 @@ function formatFileSize($bytes) {
     </script>
 </body>
 </html>
-
