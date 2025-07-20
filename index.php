@@ -419,7 +419,7 @@ function formatFileSize($bytes) {
                     <div>
                         <label for="content" class="block text-sm font-medium text-gray-700 mb-2">文本内容</label>
                         <textarea id="content" name="content" rows="4" class="form-input resize-y" placeholder="输入你的文本内容..."></textarea>
-                        <!-- <p class="mt-2 text-sm text-gray-500">文本将按原始格式保存，支持多行和空格</p> -->
+                        <p id="word-count" class="mt-2 text-sm text-gray-500">0 个字</p>
                     </div>
                     
                     <!-- 图片上传区域 -->
@@ -690,6 +690,29 @@ function formatFileSize($bytes) {
     <script>
         // 文件上传预览功能
         document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.getElementById('content');
+            const wordCountElement = document.getElementById('word-count');
+            
+            // 初始检查和设置事件监听
+            updateWordCount();
+            textarea.addEventListener('input', updateWordCount);
+            
+            function updateWordCount() {
+                // 获取文本内容并计算长度（包括中文）
+                const content = textarea.value;
+                const count = content.length;
+                
+                // 更新计数显示
+                wordCountElement.textContent = `${count} 个字`;
+                
+                // // 可选：根据字数添加视觉反馈
+                // if (count > 500) {
+                //     wordCountElement.classList.add('text-red-500');
+                // } else {
+                //     wordCountElement.classList.remove('text-red-500');
+                // }
+            }
+
             // 存储已选择的文件对象
             let selectedImages = [];
             let selectedFiles = [];
