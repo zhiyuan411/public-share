@@ -56,7 +56,7 @@ if (!$dbExists) {
         name TEXT PRIMARY KEY,
         value TEXT
     )');
-    
+
     // 设置默认值
     $defaultSettings = [
         'items_per_page' => 10,
@@ -67,7 +67,7 @@ if (!$dbExists) {
         'max_image_size' => 0,
         'max_file_size' => 0
     ];
-    
+
     $stmt = $db->prepare('INSERT INTO settings (name, value) VALUES (:name, :value)');
     foreach ($defaultSettings as $name => $value) {
         $stmt->bindValue(':name', $name, SQLITE3_TEXT);
@@ -127,8 +127,8 @@ if ($settings['file_expire_days'] > 0) {
 }
 
 // 删除空帖子
-$db->exec("DELETE FROM posts WHERE id NOT IN (SELECT DISTINCT post_id FROM images) 
-                                     AND id NOT IN (SELECT DISTINCT post_id FROM files) 
+$db->exec("DELETE FROM posts WHERE id NOT IN (SELECT DISTINCT post_id FROM images)
+                                     AND id NOT IN (SELECT DISTINCT post_id FROM files)
                                      AND (content IS NULL OR content = '')");
 
 // 处理发布请求
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $createdAt = date('Y-m-d H:i:s');
 
     // 优先从常见代理头获取真实 IP，没有则使用 REMOTE_ADDR
-    $ipAddress = 
+    $ipAddress =
         $_SERVER['HTTP_CF_CONNECTING_IP'] ??  // Cloudflare 专用头
         $_SERVER['HTTP_X_REAL_IP'] ??         // Nginx 常用头
         ($_SERVER['HTTP_X_FORWARDED_FOR'] ? explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0] : null) ??  // 取第一个 IP
@@ -154,17 +154,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindValue(':user_agent', $userAgent, SQLITE3_TEXT);
     $stmt->bindValue(':ip_address', $ipAddress, SQLITE3_TEXT);
     $stmt->bindValue(':created_at', $createdAt, SQLITE3_TEXT);
-    
+
     // 设置过期时间
     $textExpire = $settings['text_expire_days'] > 0 ? date('Y-m-d H:i:s', strtotime("+$settings[text_expire_days] days")) : null;
     $imageExpire = $settings['image_expire_days'] > 0 ? date('Y-m-d H:i:s', strtotime("+$settings[image_expire_days] days")) : null;
     $fileExpire = $settings['file_expire_days'] > 0 ? date('Y-m-d H:i:s', strtotime("+$settings[file_expire_days] days")) : null;
-    
+
     $stmt->bindValue(':text_expire', $textExpire, $textExpire ? SQLITE3_TEXT : SQLITE3_NULL);
     $stmt->bindValue(':image_expire', $imageExpire, $imageExpire ? SQLITE3_TEXT : SQLITE3_NULL);
     $stmt->bindValue(':file_expire', $fileExpire, $fileExpire ? SQLITE3_TEXT : SQLITE3_NULL);
     $stmt->execute();
-    
+
     $postId = $db->lastInsertRowID();
 
     // 处理上传的图片
@@ -175,20 +175,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($settings['max_image_size'] > 0 && $_FILES['images']['size'][$key] > $settings['max_image_size'] * 1024 * 1024) {
                     continue; // 跳过过大的图片
                 }
-                
+
                 $originalName = $_FILES['images']['name'][$key];
                 $safeFilename = uniqid() . '_' . $originalName;
                 $safeFilename = preg_replace('/[^a-zA-Z0-9_\.\-\p{Han}]/u', '', $safeFilename);
                 $destination = 'pic/' . $safeFilename;
-                
+
                 if (!is_dir('pic')) {
                     mkdir('pic', 0777, true);
                 }
-                
+
                 if (move_uploaded_file($tmpName, $destination)) {
                     // 获取文件大小（字节）
                     $fileSize = $_FILES['images']['size'][$key];
-                    
+
                     // 存储文件信息（新增 size 字段）
                     $stmt = $db->prepare('INSERT INTO images (post_id, filename, original_name, size, created_at) VALUES (:post_id, :filename, :original_name, :size, :created_at)');
                     $stmt->bindValue(':post_id', $postId, SQLITE3_INTEGER);
@@ -210,20 +210,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($settings['max_file_size'] > 0 && $_FILES['files']['size'][$key] > $settings['max_file_size'] * 1024 * 1024) {
                     continue; // 跳过过大的文件
                 }
-                
+
                 $originalName = $_FILES['files']['name'][$key];
                 $safeFilename = uniqid() . '_' . $originalName;
                 $safeFilename = preg_replace('/[^a-zA-Z0-9_\.\-\p{Han}]/u', '', $safeFilename);
                 $destination = 'file/' . $safeFilename;
-                
+
                 if (!is_dir('file')) {
                     mkdir('file', 0777, true);
                 }
-                
+
                 if (move_uploaded_file($tmpName, $destination)) {
                     // 获取文件大小（字节）
                     $fileSize = $_FILES['files']['size'][$key];
-                    
+
                     // 存储文件信息（新增 size 字段）
                     $stmt = $db->prepare('INSERT INTO files (post_id, filename, original_name, size, created_at) VALUES (:post_id, :filename, :original_name, :size, :created_at)');
                     $stmt->bindValue(':post_id', $postId, SQLITE3_INTEGER);
@@ -244,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // 处理删除请求
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $postId = (int)$_GET['id'];
-    
+
     // 删除相关图片
     $imageQuery = $db->query("SELECT filename FROM images WHERE post_id = $postId");
     while ($image = $imageQuery->fetchArray(SQLITE3_ASSOC)) {
@@ -253,7 +253,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         }
     }
     $db->exec("DELETE FROM images WHERE post_id = $postId");
-    
+
     // 删除相关文件
     $fileQuery = $db->query("SELECT filename FROM files WHERE post_id = $postId");
     while ($file = $fileQuery->fetchArray(SQLITE3_ASSOC)) {
@@ -262,10 +262,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         }
     }
     $db->exec("DELETE FROM files WHERE post_id = $postId");
-    
+
     // 删除帖子
     $db->exec("DELETE FROM posts WHERE id = $postId");
-    
+
     header('Location: index.php');
     exit;
 }
@@ -295,14 +295,14 @@ while ($post = $postsQuery->fetchArray(SQLITE3_ASSOC)) {
     while ($image = $imagesQuery->fetchArray(SQLITE3_ASSOC)) {
         $images[] = $image;
     }
-    
+
     // 获取相关文件
     $filesQuery = $db->query("SELECT * FROM files WHERE post_id = {$post['id']}");
     $files = [];
     while ($file = $filesQuery->fetchArray(SQLITE3_ASSOC)) {
         $files[] = $file;
     }
-    
+
     $posts[] = [
         'post' => $post,
         'images' => $images,
@@ -312,10 +312,10 @@ while ($post = $postsQuery->fetchArray(SQLITE3_ASSOC)) {
 
 function formatFileSize($bytes) {
     if ($bytes === 0) return '0 Bytes';
-    
+
     $units = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     $i = floor(log($bytes) / log(1024));
-    
+
     return round($bytes / pow(1024, $i), 2) . ' ' . $units[$i];
 }
 ?>
@@ -413,7 +413,7 @@ function formatFileSize($bytes) {
         <section class="post-card mb-10">
             <div class="p-6">
                 <h2 class="text-xl font-semibold mb-4">发布新内容</h2>
-                
+
                 <form id="postForm" method="POST" enctype="multipart/form-data" class="space-y-6">
                     <!-- 文本输入区域 -->
                     <div>
@@ -421,7 +421,7 @@ function formatFileSize($bytes) {
                         <textarea id="content" name="content" rows="4" class="form-input resize-y" placeholder="输入你的文本内容..."></textarea>
                         <p id="word-count" class="mt-2 text-sm text-gray-500">0 个字</p>
                     </div>
-                    
+
                     <!-- 图片上传区域 -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">上传图片</label>
@@ -438,7 +438,7 @@ function formatFileSize($bytes) {
                         <p class="mt-2 text-sm text-gray-500">图片大小限制: <strong><?= $settings['max_image_size'] ?> MB</strong></p>
                         <?php endif; ?>
                     </div>
-                    
+
                     <!-- 文件上传区域 -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">上传文件</label>
@@ -455,7 +455,7 @@ function formatFileSize($bytes) {
                         <p class="mt-2 text-sm text-gray-500">文件大小限制: <strong><?= $settings['max_file_size'] ?> MB</strong></p>
                         <?php endif; ?>
                     </div>
-                    
+
                     <!-- 发布按钮 -->
                     <div class="flex justify-end">
                         <button type="submit" class="btn btn-primary flex items-center gap-2">
@@ -469,7 +469,7 @@ function formatFileSize($bytes) {
         <!-- 展示区域 -->
         <section>
             <h2 class="text-xl font-semibold mb-6">最新消息</h2>
-            
+
             <!-- 分页控制 -->
             <div class="flex justify-between items-center mb-6">
                 <div class="text-sm text-gray-500">
@@ -477,7 +477,7 @@ function formatFileSize($bytes) {
                     至 <span class="font-medium"><?= min($currentPage * $itemsPerPage, $totalPosts) ?></span>
                     条，共 <span class="font-medium"><?= $totalPosts ?></span> 条
                 </div>
-                
+
                 <div class="flex space-x-1">
                     <?php if ($currentPage > 1): ?>
                     <a href="?page=1" class="pagination-item rounded-l-lg">
@@ -487,21 +487,21 @@ function formatFileSize($bytes) {
                         <i class="fa fa-angle-left"></i>
                     </a>
                     <?php endif; ?>
-                    
+
                     <?php
                     $startPage = max(1, $currentPage - 2);
                     $endPage = min($totalPages, $startPage + 4);
                     if ($endPage - $startPage < 4 && $startPage > 1) {
                         $startPage = max(1, $endPage - 4);
                     }
-                    
+
                     for ($i = $startPage; $i <= $endPage; $i++):
                     ?>
                     <a href="?page=<?= $i ?>" class="pagination-item <?= $i == $currentPage ? 'active' : '' ?>">
                         <?= $i ?>
                     </a>
                     <?php endfor; ?>
-                    
+
                     <?php if ($currentPage < $totalPages): ?>
                     <a href="?page=<?= $currentPage + 1 ?>" class="pagination-item">
                         <i class="fa fa-angle-right"></i>
@@ -512,7 +512,7 @@ function formatFileSize($bytes) {
                     <?php endif; ?>
                 </div>
             </div>
-            
+
             <!-- 帖子列表 -->
             <div class="space-y-6">
                 <?php if (empty($posts)): ?>
@@ -521,7 +521,7 @@ function formatFileSize($bytes) {
                     <p class="text-gray-500">暂无内容，或所有消息已经过期！</p>
                 </div>
                 <?php endif; ?>
-                
+
                 <?php foreach ($posts as $item): ?>
                 <div class="post-card">
                     <div class="p-6">
@@ -563,24 +563,24 @@ function formatFileSize($bytes) {
                                 </button>
                             </div>
                         </div>
-                        
+
                         <!-- 文件展示 -->
                         <?php if (!empty($item['files'])): ?>
                         <div class="mb-4">
                             <h3 class="text-sm font-medium text-gray-700 mb-2">附件</h3>
                             <div class="space-y-2">
                                 <?php foreach ($item['files'] as $file): ?>
-                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div class="flex items-center gap-3">
-                                        <i class="fa fa-file-o text-gray-400 text-xl"></i>
-                                        <div class="truncate">
-                                            <p class="font-medium text-gray-900 truncate"><?= htmlspecialchars($file['original_name']) ?></p>
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg overflow-hidden">
+                                    <div class="flex items-center gap-3 flex-grow overflow-hidden min-w-0">
+                                        <i class="fa fa-file-o text-gray-400 text-xl flex-shrink-0"></i>
+                                        <div class="min-w-0 flex-grow">
+                                            <p class="font-medium text-gray-900 truncate whitespace-nowrap overflow-hidden"><?= htmlspecialchars($file['original_name']) ?></p>
                                             <p class="text-xs text-gray-500">
-                                                <?= formatFileSize($file['size']) ?> <!-- 显示文件大小 -->
+                                                <?= formatFileSize($file['size']) ?>
                                             </p>
                                         </div>
                                     </div>
-                                    <a href="file/<?= $file['filename'] ?>" download="<?= htmlspecialchars($file['original_name']) ?>" class="btn btn-outline text-sm">
+                                    <a href="file/<?= $file['filename'] ?>" download="<?= htmlspecialchars($file['original_name']) ?>" class="btn btn-outline text-sm flex-shrink-0 ml-2">
                                         <i class="fa fa-download"></i> 下载
                                     </a>
                                 </div>
@@ -610,7 +610,7 @@ function formatFileSize($bytes) {
                             </div>
                         </div>
                         <?php endif; ?>
-                        
+
                         <!-- 文本展示 -->
                         <?php if (!empty($item['post']['content'])): ?>
                         <div>
@@ -638,7 +638,7 @@ function formatFileSize($bytes) {
                 </div>
                 <?php endforeach; ?>
             </div>
-            
+
             <!-- 分页控制（重复一次，用于底部） -->
             <div class="flex justify-between items-center mt-8">
                 <div class="text-sm text-gray-500">
@@ -646,7 +646,7 @@ function formatFileSize($bytes) {
                     至 <span class="font-medium"><?= min($currentPage * $itemsPerPage, $totalPosts) ?></span>
                     条，共 <span class="font-medium"><?= $totalPosts ?></span> 条
                 </div>
-                
+
                 <div class="flex space-x-1">
                     <?php if ($currentPage > 1): ?>
                     <a href="?page=1" class="pagination-item rounded-l-lg">
@@ -656,13 +656,13 @@ function formatFileSize($bytes) {
                         <i class="fa fa-angle-left"></i>
                     </a>
                     <?php endif; ?>
-                    
+
                     <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
                     <a href="?page=<?= $i ?>" class="pagination-item <?= $i == $currentPage ? 'active' : '' ?>">
                         <?= $i ?>
                     </a>
                     <?php endfor; ?>
-                    
+
                     <?php if ($currentPage < $totalPages): ?>
                     <a href="?page=<?= $currentPage + 1 ?>" class="pagination-item">
                         <i class="fa fa-angle-right"></i>
@@ -674,37 +674,37 @@ function formatFileSize($bytes) {
                 </div>
             </div>
         </section>
-        
+
         <!-- 页脚 -->
         <footer class="mt-12 text-center text-sm text-gray-500">
             <p>© 2025 公共交流区</p>
             <p class="mt-2">总访问量: <span class="font-medium"><?= $totalPosts ?></span> 条消息</p>
         </footer>
     </div>
-    
+
     <!-- 通知组件 -->
     <div id="toast" class="toast">
         <span id="toastMessage"></span>
     </div>
-    
+
     <script>
         // 文件上传预览功能
         document.addEventListener('DOMContentLoaded', function() {
             const textarea = document.getElementById('content');
             const wordCountElement = document.getElementById('word-count');
-            
+
             // 初始检查和设置事件监听
             updateWordCount();
             textarea.addEventListener('input', updateWordCount);
-            
+
             function updateWordCount() {
                 // 获取文本内容并计算长度（包括中文）
                 const content = textarea.value;
                 const count = content.length;
-                
+
                 // 更新计数显示
                 wordCountElement.textContent = `${count} 个字`;
-                
+
                 // // 可选：根据字数添加视觉反馈
                 // if (count > 500) {
                 //     wordCountElement.classList.add('text-red-500');
@@ -716,37 +716,37 @@ function formatFileSize($bytes) {
             // 存储已选择的文件对象
             let selectedImages = [];
             let selectedFiles = [];
-            
+
             // 图片上传相关
             const imageUpload = document.getElementById('imageUpload');
             const imageUploadContainer = document.getElementById('imageUploadContainer');
             const imagePreview = document.getElementById('imagePreview');
-            
+
             // 文件上传相关
             const fileUpload = document.getElementById('fileUpload');
             const fileUploadContainer = document.getElementById('fileUploadContainer');
             const filePreview = document.getElementById('filePreview');
-            
+
             // 图片上传点击事件
             document.querySelector('#imageUploadContainer .font-medium').addEventListener('click', function() {
                 imageUpload.click();
             });
-            
+
             // 文件上传点击事件
             document.querySelector('#fileUploadContainer .font-medium').addEventListener('click', function() {
                 fileUpload.click();
             });
-            
+
             // 图片上传预览 - 追加模式
             imageUpload.addEventListener('change', function() {
                 if (this.files.length > 0) {
                     imagePreview.classList.remove('hidden');
-                    
+
                     // 去重并追加文件
-                    const newFiles = Array.from(this.files).filter(file => 
+                    const newFiles = Array.from(this.files).filter(file =>
                         !selectedImages.some(img => img.name === file.name)
                     );
-                    
+
                     newFiles.forEach(file => {
                         selectedImages.push(file);
                         renderImagePreview(file);
@@ -758,83 +758,50 @@ function formatFileSize($bytes) {
             fileUpload.addEventListener('change', function() {
                 if (this.files.length > 0) {
                     filePreview.classList.remove('hidden');
-                    
+
                     // 去重并追加文件
-                    const newFiles = Array.from(this.files).filter(file => 
+                    const newFiles = Array.from(this.files).filter(file =>
                         !selectedFiles.some(f => f.name === file.name)
                     );
-                    
+
                     newFiles.forEach(file => {
                         selectedFiles.push(file);
                         renderFilePreview(file);
                     });
                 }
             });
-            
+
             // 渲染图片预览
-            function renderImagePreview(file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.alt = file.name;
-                    img.className = 'w-full h-32 object-cover rounded-lg';
-                    
-                    const container = document.createElement('div');
-                    container.className = 'relative';
-                    container.dataset.filename = file.name;
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.className = 'absolute top-1 right-1 bg-white bg-opacity-80 text-gray-700 rounded-full w-6 h-6 flex items-center justify-center hover:bg-white transition-colors';
-                    removeBtn.innerHTML = '<i class="fa fa-times"></i>';
-                    removeBtn.onclick = function() {
-                        // 从数组中移除文件
-                        selectedImages = selectedImages.filter(img => img.name !== file.name);
-                        container.remove();
-                        if (imagePreview.children.length === 0) {
-                            imagePreview.classList.add('hidden');
-                        }
-                    };
-                    
-                    container.appendChild(img);
-                    container.appendChild(removeBtn);
-                    imagePreview.appendChild(container);
-                };
-                
-                reader.readAsDataURL(file);
-            }
-            
-            // 渲染文件预览
             function renderFilePreview(file) {
                 const container = document.createElement('div');
-                container.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+                container.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg overflow-hidden';
                 container.dataset.filename = file.name;
-                
+
                 const leftDiv = document.createElement('div');
-                leftDiv.className = 'flex items-center gap-3';
-                
+                leftDiv.className = 'flex items-center gap-3 flex-grow overflow-hidden min-w-0';
+
                 const icon = document.createElement('i');
-                icon.className = 'fa fa-file-o text-gray-400 text-xl';
-                
+                icon.className = 'fa fa-file-o text-gray-400 text-xl flex-shrink-0';
+
                 const infoDiv = document.createElement('div');
-                infoDiv.className = 'truncate';
-                
+                infoDiv.className = 'min-w-0 flex-grow';
+
                 const name = document.createElement('p');
-                name.className = 'font-medium text-gray-900 truncate';
+                name.className = 'font-medium text-gray-900 truncate whitespace-nowrap overflow-hidden';
                 name.textContent = file.name;
-                
+
                 const size = document.createElement('p');
                 size.className = 'text-xs text-gray-500';
                 size.textContent = formatFileSize(file.size);
-                
+
                 infoDiv.appendChild(name);
                 infoDiv.appendChild(size);
-                
+
                 leftDiv.appendChild(icon);
                 leftDiv.appendChild(infoDiv);
-                
+
                 const removeBtn = document.createElement('button');
-                removeBtn.className = 'btn btn-outline text-sm';
+                removeBtn.className = 'btn btn-outline text-sm flex-shrink-0 ml-2';
                 removeBtn.innerHTML = '<i class="fa fa-times"></i> 移除';
                 removeBtn.onclick = function() {
                     // 从数组中移除文件
@@ -844,55 +811,101 @@ function formatFileSize($bytes) {
                         filePreview.classList.add('hidden');
                     }
                 };
-                
+
                 container.appendChild(leftDiv);
                 container.appendChild(removeBtn);
                 filePreview.appendChild(container);
             }
-            
+
+            // 渲染文件预览
+            function renderFilePreview(file) {
+                const container = document.createElement('div');
+                container.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg overflow-hidden';
+                container.dataset.filename = file.name;
+
+                const leftDiv = document.createElement('div');
+                leftDiv.className = 'flex items-center gap-3 flex-grow overflow-hidden min-w-0';
+
+                const icon = document.createElement('i');
+                icon.className = 'fa fa-file-o text-gray-400 text-xl flex-shrink-0';
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'min-w-0 flex-grow';
+
+                const name = document.createElement('p');
+                name.className = 'font-medium text-gray-900 truncate whitespace-nowrap overflow-hidden';
+                name.textContent = file.name;
+
+                const size = document.createElement('p');
+                size.className = 'text-xs text-gray-500';
+                size.textContent = formatFileSize(file.size);
+
+                infoDiv.appendChild(name);
+                infoDiv.appendChild(size);
+
+                leftDiv.appendChild(icon);
+                leftDiv.appendChild(infoDiv);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn btn-outline text-sm flex-shrink-0 ml-2';
+                removeBtn.innerHTML = '<i class="fa fa-times"></i> 移除';
+                removeBtn.onclick = function() {
+                    // 从数组中移除文件
+                    selectedFiles = selectedFiles.filter(f => f.name !== file.name);
+                    container.remove();
+                    if (filePreview.children.length === 0) {
+                        filePreview.classList.add('hidden');
+                    }
+                };
+
+                container.appendChild(leftDiv);
+                container.appendChild(removeBtn);
+                filePreview.appendChild(container);
+            }
+
             // 拖放功能 - 优化为追加模式
             function setupDragDrop(container, input, fileArray) {
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                     container.addEventListener(eventName, preventDefaults, false);
                 });
-                
+
                 function preventDefaults(e) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
-                
+
                 ['dragenter', 'dragover'].forEach(eventName => {
                     container.addEventListener(eventName, highlight, false);
                 });
-                
+
                 ['dragleave', 'drop'].forEach(eventName => {
                     container.addEventListener(eventName, unhighlight, false);
                 });
-                
+
                 function highlight() {
                     container.classList.add('drag-over');
                 }
-                
+
                 function unhighlight() {
                     container.classList.remove('drag-over');
                 }
-                
+
                 container.addEventListener('drop', handleDrop.bind(null, input, fileArray), false);
             }
 
             function handleDrop(input, fileArray, e) {
                 const dt = e.dataTransfer;
                 const newFiles = Array.from(dt.files);
-                
+
                 if (newFiles.length > 0) {
                     // 去重处理
-                    const uniqueFiles = newFiles.filter(file => 
+                    const uniqueFiles = newFiles.filter(file =>
                         !fileArray.some(f => f.name === file.name)
                     );
-                    
+
                     // 添加到文件数组
                     uniqueFiles.forEach(file => fileArray.push(file));
-                    
+
                     // 更新预览
                     if (input.id === 'imageUpload') {
                         imagePreview.classList.remove('hidden');
@@ -903,40 +916,40 @@ function formatFileSize($bytes) {
                     }
                 }
             }
-            
+
             setupDragDrop(imageUploadContainer, imageUpload, selectedImages);
             setupDragDrop(fileUploadContainer, fileUpload, selectedFiles);
-            
+
             // 文件大小格式化
             function formatFileSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
-                
+
                 const k = 1024;
                 const sizes = ['Bytes', 'KB', 'MB', 'GB'];
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
-                
+
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
-            
+
             // 表单提交处理
             document.getElementById('postForm').addEventListener('submit', function(e) {
                 // 创建临时 DataTransfer 对象
                 const imageDataTransfer = new DataTransfer();
                 const fileDataTransfer = new DataTransfer();
-                
+
                 // 添加我们管理的文件到 DataTransfer
                 selectedImages.forEach(file => imageDataTransfer.items.add(file));
                 selectedFiles.forEach(file => fileDataTransfer.items.add(file));
-                
+
                 // 更新文件输入控件的 files 属性
                 document.getElementById('imageUpload').files = imageDataTransfer.files;
                 document.getElementById('fileUpload').files = fileDataTransfer.files;
-                
+
                 // 表单验证（使用我们管理的文件数组）
                 const content = document.getElementById('content').value.trim();
                 const hasImages = selectedImages.length > 0;
                 const hasFiles = selectedFiles.length > 0;
-                
+
                 if (!content && !hasImages && !hasFiles) {
                     e.preventDefault();
                     showToast('请至少输入文本内容、上传图片或文件中的一项', 'error');
@@ -948,7 +961,7 @@ function formatFileSize($bytes) {
         function copyText(postId) {
             const preElement = document.getElementById(`content-${postId}`);
             const textToCopy = preElement.innerText;
-            
+
             // 首先尝试使用现代 Clipboard API
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(textToCopy)
@@ -972,7 +985,7 @@ function formatFileSize($bytes) {
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-            
+
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
@@ -987,7 +1000,7 @@ function formatFileSize($bytes) {
                 document.body.removeChild(textArea);
             }
         }
-        
+
         // 复制图片功能
         function copyImage(imagePath) {
             // 查找当前点击按钮对应的图片元素和覆盖图层
@@ -1013,10 +1026,10 @@ function formatFileSize($bytes) {
             function handleCopyFailure() {
                 // 隐藏覆盖图层
                 overlay.style.display = 'none';
-                
+
                 // 显示提示
                 showToast('复制失败，请在图片上右键选择"复制图片"（图片上按钮已隐去，稍后自动恢复）', 'error');
-                
+
                 // 5秒后恢复覆盖图层显示
                 setTimeout(() => {
                     overlay.style.display = '';
@@ -1029,17 +1042,17 @@ function formatFileSize($bytes) {
             // 收集所有内容
             let content = '';
             const postCard = document.querySelector(`[onclick="copyAllContent(${postId})"]`).closest('.post-card');
-            
+
             // 添加时间和用户信息
             const info = postCard.querySelector('.text-sm.text-gray-500').innerText.trim();
             content += info + '\n\n';
-            
+
             // 添加文本内容
             const textContent = postCard.querySelector('pre');
             if (textContent) {
                 content += '【文本内容】\n' + textContent.innerText + '\n\n';
             }
-            
+
             // 添加图片链接
             const images = postCard.querySelectorAll('img');
             if (images.length > 0) {
@@ -1049,7 +1062,7 @@ function formatFileSize($bytes) {
                 });
                 content += '\n';
             }
-            
+
             // 添加文件链接
             const files = postCard.querySelectorAll('.fa-download');
             if (files.length > 0) {
@@ -1059,9 +1072,9 @@ function formatFileSize($bytes) {
                     content += window.location.origin + '/' + link.href + ' (' + link.previousElementSibling.innerText.replace(/\n/g, ' ').trim() + ')\n';
                 });
             }
-            
+
             // 复制到剪贴板
-            
+
             // 首先尝试使用现代 Clipboard API
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(content).then(function() {
@@ -1079,17 +1092,17 @@ function formatFileSize($bytes) {
         function parseUrls(postId) {
             const contentElement = document.getElementById(`content-${postId}`);
             const content = contentElement.textContent || contentElement.innerText;
-            
+
             // 使用正则表达式提取URL
             const urlRegex = /https?:\/\/[^\s<>"']+/g;
             const urls = content.match(urlRegex) || [];
-            
+
             const urlsListElement = document.getElementById(`urls-list-${postId}`);
             const containerElement = document.getElementById(`urls-container-${postId}`);
-            
+
             // 清空现有列表
             urlsListElement.innerHTML = '';
-            
+
             if (urls.length === 0) {
                 urlsListElement.innerHTML = '<div class="text-gray-500 italic">未找到网址</div>';
             } else {
@@ -1097,48 +1110,48 @@ function formatFileSize($bytes) {
                 urls.forEach(url => {
                     const urlElement = document.createElement('div');
                     urlElement.className = 'mb-1';
-                    
+
                     const linkElement = document.createElement('a');
                     linkElement.href = url;
                     linkElement.textContent = url;
                     linkElement.target = '_blank';
                     linkElement.className = 'text-blue-600 hover:underline break-all';
-                    
+
                     urlElement.appendChild(linkElement);
                     urlsListElement.appendChild(urlElement);
                 });
             }
-            
+
             // 显示URL容器
             containerElement.classList.remove('hidden');
-        }        
-        
+        }
+
         // 确认删除
         function confirmDelete(postId) {
             if (confirm('确定要删除这条消息吗？此操作不可撤销！')) {
                 window.location.href = `index.php?action=delete&id=${postId}`;
             }
         }
-        
+
         // 显示提示消息
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toastMessage');
-            
+
             toastMessage.textContent = message;
             toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
-            
+
             // 显示提示
             setTimeout(() => {
                 toast.classList.add('show');
             }, 10);
-            
+
             // 自动隐藏
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
         }
-        
+
     </script>
 </body>
 </html>
