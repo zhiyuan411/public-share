@@ -1153,5 +1153,6 @@ function formatFileSize($bytes) {
         }
 
     </script>
+    <script src="/floating-ball/load-floating-ball.js"></script>
 </body>
 </html>

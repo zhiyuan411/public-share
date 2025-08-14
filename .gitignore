@@ -24,6 +24,7 @@ Thumbs.db
 
 # 忽略本工程数据文件等
 admin.php
+/floating-ball
 /data
 /file
 /pic
