@@ -772,49 +772,41 @@ function formatFileSize($bytes) {
             });
 
             // 渲染图片预览
-            function renderFilePreview(file) {
+            function renderImagePreview(file) {
                 const container = document.createElement('div');
-                container.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg overflow-hidden';
+                container.className = 'relative group';
                 container.dataset.filename = file.name;
 
-                const leftDiv = document.createElement('div');
-                leftDiv.className = 'flex items-center gap-3 flex-grow overflow-hidden min-w-0';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = file.name;
+                img.className = 'w-full h-32 object-cover rounded-lg';
+                    
+                // 图片加载完成后释放URL对象
+                img.onload = function() {
+                    URL.revokeObjectURL(img.src);
+                };
 
-                const icon = document.createElement('i');
-                icon.className = 'fa fa-file-o text-gray-400 text-xl flex-shrink-0';
+                const overlay = document.createElement('div');
+                overlay.className = 'absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg';
 
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'min-w-0 flex-grow';
-
-                const name = document.createElement('p');
-                name.className = 'font-medium text-gray-900 truncate whitespace-nowrap overflow-hidden';
-                name.textContent = file.name;
-
-                const size = document.createElement('p');
-                size.className = 'text-xs text-gray-500';
-                size.textContent = formatFileSize(file.size);
-
-                infoDiv.appendChild(name);
-                infoDiv.appendChild(size);
-
-                leftDiv.appendChild(icon);
-                leftDiv.appendChild(infoDiv);
-
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'btn btn-outline text-sm flex-shrink-0 ml-2';
-                removeBtn.innerHTML = '<i class="fa fa-times"></i> 移除';
-                removeBtn.onclick = function() {
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn btn-primary text-sm w-24';
+                saveBtn.innerHTML = '<i class="fa fa-trash"></i> 移除';
+                saveBtn.onclick = function(e) {
+                    e.stopPropagation();
                     // 从数组中移除文件
-                    selectedFiles = selectedFiles.filter(f => f.name !== file.name);
+                    selectedImages = selectedImages.filter(img => img.name !== file.name);
                     container.remove();
-                    if (filePreview.children.length === 0) {
-                        filePreview.classList.add('hidden');
+                    if (imagePreview.children.length === 0) {
+                        imagePreview.classList.add('hidden');
                     }
                 };
 
-                container.appendChild(leftDiv);
-                container.appendChild(removeBtn);
-                filePreview.appendChild(container);
+                overlay.appendChild(saveBtn);
+                container.appendChild(img);
+                container.appendChild(overlay);
+                imagePreview.appendChild(container);
             }
 
             // 渲染文件预览
