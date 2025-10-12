@@ -325,7 +325,7 @@ function formatFileSize($bytes) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>公共交流区</title>
+    <title>临时信息中转站</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -400,8 +400,20 @@ function formatFileSize($bytes) {
 <body class="bg-gray-50 font-sans">
     <div class="container mx-auto px-4 py-8 max-w-5xl">
         <header class="mb-8">
-            <h1 class="text-[clamp(1.75rem,4vw,2.5rem)] font-bold text-dark mb-2">公共交流区</h1>
-            <p class="text-gray-600 mb-6">分享你的想法、图片和文件</p>
+            <h1 class="text-[clamp(1.75rem,4vw,2.5rem)] font-bold text-dark mb-2">临时信息中转站</h1>
+            <p class="text-gray-600 mb-6">代替微信在多端设备进行文本、图片和文件的互传</p>
+            
+            <!-- 新增的有效期提示信息 -->
+            <div class="bg-blue-50 border-l-4 border-primary p-4 mb-6 rounded-r">
+                <p class="text-sm text-gray-700">
+                    <i class="fa fa-info-circle text-primary mr-2"></i>
+                    当前消息有效期设置：
+                    文本内容 <strong><?= $settings['text_expire_days'] > 0 ? $settings['text_expire_days'] . '天' : '永久有效' ?></strong>，
+                    图片 <strong><?= $settings['image_expire_days'] > 0 ? $settings['image_expire_days'] . '天' : '永久有效' ?></strong>，
+                    文件 <strong><?= $settings['file_expire_days'] > 0 ? $settings['file_expire_days'] . '天' : '永久有效' ?></strong>
+                </p>
+            </div>
+            
             <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-500">
                     当前共有 <strong><?= $totalPosts ?></strong> 条消息
@@ -704,13 +716,6 @@ function formatFileSize($bytes) {
 
                 // 更新计数显示
                 wordCountElement.textContent = `${count} 个字`;
-
-                // // 可选：根据字数添加视觉反馈
-                // if (count > 500) {
-                //     wordCountElement.classList.add('text-red-500');
-                // } else {
-                //     wordCountElement.classList.remove('text-red-500');
-                // }
             }
 
             // 存储已选择的文件对象
@@ -781,7 +786,7 @@ function formatFileSize($bytes) {
                 img.src = URL.createObjectURL(file);
                 img.alt = file.name;
                 img.className = 'w-full h-32 object-cover rounded-lg';
-                    
+
                 // 图片加载完成后释放URL对象
                 img.onload = function() {
                     URL.revokeObjectURL(img.src);
@@ -1148,3 +1153,4 @@ function formatFileSize($bytes) {
     <script src="/floating-ball/load-floating-ball.js"></script>
 </body>
 </html>
+
